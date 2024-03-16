@@ -178,6 +178,9 @@ fun GeoGenContext.parseGeoGenLine(line: String) {
         "Symedian" -> "[bounded] [gray] $name = symedian(${args[1]}, ${args[0]}, ${args[2]})"
         "RadiusLine" -> "[bounded] [gray] $name = line(${args[0]}, circumcenter(${args[1]}, ${args[0]}, ${args[2]}))"
 
+        "IncircleTangentPoint" -> "$name = project(incenter(${args[0]}, ${args[1]}, ${args[2]}), ${args[1]}, ${args[2]})"
+        "PonceletPoint" -> "$name = poncelet(${args.joinToString()})"
+        "FeuerbachPoint" -> "$name = feuerbach(${args.joinToString()})"
 
         "SymedianEnd" -> "$name = intersect(symedian(${args[1]}, ${args[0]}, ${args[2]}), ${args[1]}, ${args[2]})"
         "RadiusLineEnd" -> "$name = intersect(${args[0]}, circumcenter(${args[1]}, ${args[0]}, ${args[2]}), ${args[1]}, ${args[2]})"

@@ -52,6 +52,14 @@ val polygon = Arg("Polygon") {
     }
 }
 
+val quadrilateral = Arg("Quadrilateral") {
+    when (val arg = nextArg()) {
+        is Quadrilateral -> arg
+        is Complex -> Quadrilateral(arg, point(), point(), point())
+        else -> null
+    }
+}
+
 val circle = Arg("Circle") {
     when (val arg = nextArg()) {
         is Circle -> arg
@@ -135,6 +143,25 @@ fun intersect(l1: Line, l2: Line) =
     (l1.coef * l2.free - l1.free * l2.coef) /
             (l1.coef.conj() * l2.coef - l1.coef * l2.coef.conj())
 
+
+fun cintesect(option: TrinomialOption, l: Line, c: Circle): Complex {
+    return root(option,
+        l.coef.conj(),
+        l.free + c.center.conj() * l.coef - c.center * l.coef.conj(),
+        c.radiusSqr * l.coef - c.center * l.free - c.center.norm * l.coef
+    )
+}
+
+fun ccintesect(option: TrinomialOption, c1: Circle, c2: Circle): Complex {
+    return (c2.center - c1.center).conj().let {
+        root(option,
+            it,
+            (c2.radiusSqr - c1.radiusSqr).real() - (c2.center + c1.center) * it,
+            c1.center * c2.center * it - c1.center * c2.radiusSqr + c2.center * c1.radiusSqr
+        )
+    }
+}
+
 fun divide(alpha: Complex, l: Segment) = l.from * (1 - alpha) + l.to * alpha
 
 fun project(a: Complex, l: Line) = (a - (a.conj() * l.coef + l.free) / l.coef.conj()) / 2
@@ -191,6 +218,19 @@ fun symedian(a: Complex, b: Complex, c: Complex) = line(b, ((a + c) / 2).inversi
 fun orthocenter(t: Triangle) = ((t.b - t.a) * t.c.norm + (t.c - t.b) * t.a.norm + (t.a - t.c) * t.b.norm +
         (t.a * t.a - t.b * t.b) * t.c.conj() + (t.b * t.b - t.c * t.c) * t.a.conj() + (t.c * t.c - t.a * t.a) * t.b.conj()) /
         ((t.b - t.c) * t.a.conj() + (t.c - t.a) * t.b.conj() + (t.a - t.b) * t.c.conj())
+
+fun poncelet(p: Quadrilateral): Complex {
+    // AB, BC, AC, AD, BD
+    val (a, b, c, d) = p.points
+    val midAB = (a + b) / 2
+    val midBC = (b + c) / 2
+    val midAC = (c + a) / 2
+    val midAD = (d + a) / 2
+    val midBD = (d + b) / 2
+    return ccintesect(TrinomialOption.RootNot(midAB), circumcircle(Triangle(midAB, midAC, midBC)), circumcircle(Triangle(midAB, midAD, midBD)))
+}
+
+
 
 val functions = listOf(
     "Constructors" to listOf(
@@ -260,6 +300,9 @@ val functions = listOf(
         point.function("lemoine", triangle) { t ->
             isogonal(centroid(t), t)
         },
+        point.function("feuerbach", triangle) { t ->
+            poncelet(Quadrilateral(t.a, t.b, t.c, incenter(t)))
+        }
     ),
     "Geometry of a triangle" to listOf(
         circle.function("circumcircle", triangle, ::circumcircle),
@@ -308,15 +351,27 @@ val functions = listOf(
         triangle.function("orthotriangle", triangle) { t ->
             Triangle(project(t.a, line(t.b, t.c)), project(t.b, line(t.c, t.a)), project(t.c, line(t.a, t.b)))
         },
-        triangle.function("bevantriangle", triangle) { t ->
+        triangle.function("bevan_triangle", triangle) { t ->
             Triangle(excenter(t.b, t.a, t.c), excenter(t.c, t.b, t.a), excenter(t.a, t.c, t.b))
         },
-        point.function("bisectorEnd", point, point, point) { a, b, c ->
+        point.function("bisector_end", point, point, point) { a, b, c ->
             intersect(bisector(angleFromPoints(a, b, c)), line(a, c))
         },
-        point.function("symedianEnd", point, point, point) { a, b, c ->
+        point.function("symediane_nd", point, point, point) { a, b, c ->
             intersect(symedian(a, b, c), line(a, c))
         },
+    ),
+    "Geometry of quadrilateral" to listOf(
+        point.function("poncelet", quadrilateral, ::poncelet),
+        point.function("miquel", quadrilateral) { q ->
+            val (a, b, c, d) = q.points
+            val p = intersect(line(a, b), line(c, d))
+            ccintesect(TrinomialOption.RootNot(p), circumcircle(Triangle(p, a, b)), circumcircle(Triangle(p, c, d)))
+        },
+        line.function("newton_gauss_line", quadrilateral) { q ->
+            val (a, b, c, d) = q.points
+            line((a + c) / 2, (b + d) / 2)
+        }
     ),
     "Lines" to listOf(
         line.function("midline", segment) { l ->
